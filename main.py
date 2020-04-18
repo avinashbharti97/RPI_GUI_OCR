@@ -1,4 +1,5 @@
 import tkinter
+import numpy as np
 import cv2
 import PIL.Image, PIL.ImageTk
 import time
@@ -43,15 +44,50 @@ class App:
             self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
             self.canvas.create_image(0,0, image = self.photo, anchor=tkinter.NW)
         self.window.after(self.delay, self.update)
+    
+    def preprocess_image(self, image):
+        #get grayscale
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        #remove noise
+        image = cv2.medianBlur(image, 5)
+
+        #thresholding
+        # image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+        #dilation
+        # self.kernal = np.ones((5,5), np.uint8)
+        # image = cv2.dilate(image, self.kernal, iterations=1)
+
+        # #opening
+        # image = cv2.morphologyEx(image, cv2.MORPH_OPEN, self.kernal)
+        
+        # #canny edge detection
+        # image = cv2.Canny(image, 100,200) 
+
+        # self.coords = np.column_stack(np.where(image > 0))
+        # self.angle = cv2.minAreaRect(self.coords)[-1]
+        # if self.angle < -45:
+            # self.angle = -(90 + self.angle)
+        # else:
+            # self.angle = -(self.angle)
+        # (self.h, self.w) = image.shape[:2]
+        # center = (self.w // 2, self.h // 2)
+        # M = cv2.getRotationMatrix2D(center, self.angle, 1.0)
+        # image = cv2.warpAffine(image, M, (self.w, self.h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        
+        return image
+
 
     def snapshot(self):
         #get a frame from video source
         ret, frame = self.vid.get_frame()
 
         if ret:
-            cv2.imwrite("frame-"+time.strftime("%d-%m-%Y-%H-%M-%S")+".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            image = self.preprocess_image(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            cv2.imwrite("frame-"+time.strftime("%d-%m-%Y-%H-%M-%S")+".jpg", image)
             custom_config = r'--oem 3 --psm 6'
-            output_text = pytesseract.image_to_string(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), config = custom_config)
+            output_text = pytesseract.image_to_string(image, config = custom_config)
             print(output_text)
             self.stext.insert(tkinter.INSERT, output_text)
             self.stext.insert(tkinter.END, "___END___")
