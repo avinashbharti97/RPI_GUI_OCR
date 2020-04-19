@@ -5,6 +5,7 @@ import PIL.Image, PIL.ImageTk
 import time
 import pytesseract
 from tkinter.scrolledtext import ScrolledText 
+from tkinter import messagebox
 import tkinter.ttk as ttk
 from ttkthemes import ThemedStyle
 
@@ -21,19 +22,35 @@ class App:
         self.vid = VideoCapture(video_source)
 
         #canvas for video render
-        self.canvas = tkinter.Canvas(window, width=self.vid.width, height=self.vid.height)
+        self.canvas = tkinter.Canvas(window, width=self.vid.width/2, height=self.vid.height/2)
         self.canvas.pack()
         
-        self.btn_snapshot = ttk.Button(window, text="Scan", width=50, command=self.snapshot)
+        self.btn_snapshot = ttk.Button(window, text="Scan", command=self.snapshot)
         self.btn_snapshot.pack(anchor=tkinter.CENTER, expand=True)
 
         self.stext = ScrolledText(window, width=50, height=10)
         self.stext.pack(anchor=tkinter.CENTER, expand=True)
+        self.stext_clear = ttk.Button(window, text="clear", command=self.clear)
+        self.stext_clear.pack(anchor=tkinter.CENTER)
+
+        self.export_file = ttk.Button(window, text="export", command=self.export)
+        self.export_file.pack(anchor=tkinter.CENTER)
 
         self.delay = 15
         self.update()
 
         self.window.mainloop()
+
+    #exporting text to file
+    def export(self):
+        f = open("File-"+time.strftime("%d-%m-%Y-%H-%M-%S")+".txt", "a")
+        f.write(self.output_text)
+        f.close()
+        messagebox.showinfo("Success","File exported successfully")
+
+    #to clean the textarea
+    def clear(self):
+        self.stext.delete('1.0', tkinter.END)
 
     #loop to render frames continuosuly
     def update(self):
@@ -87,10 +104,9 @@ class App:
             image = self.preprocess_image(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
             cv2.imwrite("frame-"+time.strftime("%d-%m-%Y-%H-%M-%S")+".jpg", image)
             custom_config = r'--oem 3 --psm 6'
-            output_text = pytesseract.image_to_string(image, config = custom_config)
-            print(output_text)
-            self.stext.insert(tkinter.INSERT, output_text)
-            self.stext.insert(tkinter.END, "___END___")
+            self.output_text = pytesseract.image_to_string(image, config = custom_config)
+            print(self.output_text)
+            self.stext.insert(tkinter.INSERT, self.output_text)
             
 
 class VideoCapture:
@@ -113,6 +129,7 @@ class VideoCapture:
         if self.vid.isOpened():
             ret, frame = self.vid.read()
             if ret:
+                frame = cv2.resize(frame, (int(self.width/2),int(self.height/2)))
                 #this return a boolean success flag and the frame converted to BGR
                 return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             else:
